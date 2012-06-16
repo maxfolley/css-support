@@ -4,6 +4,7 @@ var SUPPORT = (function () {
     
     var that = {
         animation: {
+            delay: '',
             name: '',
             endEvent: '',
             playState: ''
@@ -20,18 +21,21 @@ var SUPPORT = (function () {
     }
     switch(Modernizr.prefixed("animation")) {
         case 'WebkitAnimation':
+            that.animation.delay = '-webkit-animation-delay'; 
             that.animation.name = '-webkit-animation-name'; 
             that.animation.endEvent = 'webkitAnimationEnd'; 
             that.animation.playState = '-webkit-animation-play-state'; 
             break;
 
         case 'MozAnimation':
+            that.animation.delay = '-moz-animation-delay'; 
             that.animation.name = '-moz-animation-name'; 
             that.animation.endEvent = 'animationend';
             that.animation.playState = '-moz-animation-play-state'; 
             break;
         
         case 'animation':
+            that.animation.delay = 'animation-delay'; 
             that.animation.name = 'animation-name'; 
             that.animation.endEvent = 'animationend';
             that.animation.playState = 'animation-play-state'; 
