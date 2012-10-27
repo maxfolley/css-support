@@ -105,7 +105,6 @@ var SUPPORT = (function () {
 
     function getEase(id) {
         var ease = timing[id] || timing['ease' + id.charAt(0).toUpperCase()+ id.substr(1)];
-        console.log("ease",  ease);
         return ease;
     }
 
