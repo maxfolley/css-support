@@ -9,7 +9,17 @@ Usage
 -----
 
     var myEl = document.getElementById("my-id");
-    myEl.style[SUPPORT.animation.shortHand] = "opacity 1s ease-in-out"  
+    myEl.style[SUPPORT.transition] = "opacity 1s ease-in-out";  
+
+    // Transformations
+    myEl.style[SUPPORT.transform] = "rotate(120deg) translate3d(100px, 200px, 100px)";  
 
     // To animate
-    SUPPORT.animate(el, {height: 200, easing: SUPPORT.easeInOutCubic, duration: 600})   
+    SUPPORT.animate(el, {height: 200, easing: 'inOutCubic', duration: '600ms'});   
+
+    // Seuencig animations
+    SUPPORT.animate(el, [{height: 200, easing: 'inOutCubic', duration: '600ms'}, {opactiy: 1, delay: '400ms'}]);   
+
+    // Getting ease types
+    SUPPORT.ease('inOut');
+    SUPPORT.ease('inOutCubic');
