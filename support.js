@@ -57,6 +57,7 @@ var SUPPORT = (function () {
     }
 
     that.animationEnd = animEvents[that.animation];
+    that.cssanimations = (typeof that.animation === "undefined") ? false : true;
     that.csstransitions = (typeof that.transition === "undefined") ? false : true;
     that.transitionEnd = transEvents[that.transition];
 
