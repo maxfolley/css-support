@@ -5,6 +5,8 @@ A javascript support object for accessing CSS3 animation declaration and event n
 
 Also contains an animation helper that will use css transitions if available and will fallback to jQuery if not.
 
+SUPPORT only has one dependeny at this time, jQuery. This dependency will be removed on the next iteration.
+
 Usage
 -----
 
@@ -15,10 +17,21 @@ Usage
     myEl.style[SUPPORT.transform] = "rotate(120deg) translate3d(100px, 200px, 100px)";  
 
     // To animate
-    SUPPORT.animate(el, {height: 200, easing: 'inOutCubic', duration: '600ms'});   
+    SUPPORT.animate(el, {
+      height: 200,
+      easing: 'inOutCubic',
+      duration: 600
+    });   
 
     // Seuencig animations
-    SUPPORT.animate(el, [{height: 200, easing: 'inOutCubic', duration: '600ms'}, {opactiy: 1, delay: '400ms'}]);   
+    SUPPORT.animate(el, [{
+      height: 200,
+      easing: 'inOutCubic',
+      duration: 600
+    }, {
+      opactiy: 1,
+      delay: 400
+    }]);   
 
     // Getting ease types
     SUPPORT.ease('inOut');
@@ -29,5 +42,19 @@ Usage
     SUPPORT.transitionEnd
 
     // Check if animations or transition are supported
-    SUPPORT.cssanimations
-    SUPPORT.csstransitions
+    SUPPORT.animation
+    SUPPORT.transition
+
+     // Animte usinc css transitions and supply a fallback
+    if (SUPPORT.transition) {
+      SUPPORT.animate(el, [{
+        height: 200,
+        easing: 'inOutCubic',
+        duration: 600
+      }, {
+        opactiy: 1,
+        delay: 400
+      }]);
+    } else {
+      // Fallback could use jQuery animate or just set some css values
+    }

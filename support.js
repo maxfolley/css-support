@@ -6,28 +6,52 @@ var SUPPORT = (function () {
     style = (document.body || document.documentElement).style;
     prefixes = ['Moz', 'Webkit', 'O', 'ms'];
     numPrefixes = prefixes.length;
-    transEvents = {'transition': 'transitionend', 'MozTransition': 'transitionend', 'OTransition': 'oTransitionEnd', 'WebkitTransition': 'webkitTransitionEnd', 'msTransition': 'MSTransitionEnd'};
+    // Tracks number of running animations for a givien element
+    runningDict = {};
+    transEvents = {'transition': 'transitionend', '-moz-transition': 'transitionend', '-o-transition': 'oTransitionEnd', '-webkit-transition': 'webkitTransitionEnd', '-ms-transition': 'MSTransitionEnd'};
     that = {
         // SUPPORT.animate(el, {opacity: 1, duration: 800, delay: 300});
         // SUPPORT.animate(el, [{opacity: 1, duration: 800, delay: 300}, {x: 100, ease: 'inCubic'}]);
         animate: function(el, opts) {
-            var i, prop, propObj,
-                map = {}, props = {}, trans = [];
-            if(that.csstransitions === true) {
-                // Build animation string 
-                if(opts instanceof Array) {
-                    for(i = 0; i < opts.length; i += 1) {
-                        buildProps(props, opts[i]);
+            var i, prop, propObj, transStr,
+                map = {}, numTrans = 0, props = {}, supportData, trans = [];
+            // Build animation string 
+            if (opts instanceof Array) {
+                for (i = 0; i < opts.length; i += 1) {
+                    buildProps(props, opts[i]);
+                }
+            } else {
+                // allow one complete
+                buildProps(props, opts);
+            }
+            for (prop in props) {
+                propObj = props[prop];
+
+                transStr = prop + ' ' + propObj.duration + ' ' + getEase(propObj.easing);
+                if (typeof propObj.delay !== "undefined") {
+                    transStr += ' ' + propObj.delay;
+                }
+                trans.push(transStr);
+                map[prop] = propObj.value;
+                numTrans += 1;
+            }
+
+            if (that.csstransitions === true) {
+                supportData = el.data("supportData") || {};
+                if (typeof supportData.running === "undefined" || supportData.running === false) {
+                    supportData = {
+                        oldCSS: el.css(that.transition),
+                        onEnd: transEndHelper(el, props) 
                     }
-                } else {
-                    buildProps(props, opts);
+                    el[0].addEventListener(that.transitionEnd, supportData.onEnd);
                 }
-                for(prop in props) {
-                    propObj = props[prop];
-                    trans.push(prop + ' ' + propObj.duration + ' ' + getEase(propObj.easing) + ' ' + propObj.delay);
-                    map[prop] = propObj.value;
-                }
-                el.css(that.transition, trans.join(', ')).css(map);
+                supportData.running = true;
+                supportData.numTrans = trans.length;
+                el.data("supportData", supportData)
+                  .css(that.transition, trans.join(', '))
+                  .css(map);
+            } else {
+                el.css(map);
             }
         },
         animation: {
@@ -37,7 +61,18 @@ var SUPPORT = (function () {
             playState: ''
         },
         ease: function(id) {
-          getEase(id);
+            getEase(id);
+        },
+        hasProp: function(propID) {
+            return (typeof getProp(propID) === "undefined") ? false : true;
+        },
+        stopAnimation: function(el) {
+            sData = el.data("supportData");
+            if (typeof sData === "object") {
+                el[0].removeEventListener(that.transitionEnd, sData.onEnd);
+                el.css(that.transition, sData.oldCSS);
+                el.removeData("supportData");
+            }
         },
         animation: getProp('animation'),
         animationDelay: getProp('animationDelay'),
@@ -48,6 +83,8 @@ var SUPPORT = (function () {
         animationName: getProp('animationName'),
         animationPlayState: getProp('animationPlayState'),
         animationTimingFunction: getProp('animationTimingFunction'),
+        perspective: getProp('perspective'),
+        perspectiveOrigin: getProp('perspective-origin'),
         transition: getProp('transition'),
         transitionDelay: getProp('transitionDelay'),
         transitionDuration: getProp('transitionDuration'),
@@ -61,8 +98,8 @@ var SUPPORT = (function () {
     that.csstransitions = (typeof that.transition === "undefined") ? false : true;
     that.transitionEnd = transEvents[that.transition];
 
-    defaults = {'duration': '0', 'easing': 'ease', 'delay': '0'};
-    specialProps = {'transform': that.transform};
+    defaults = {'duration': '0', 'easing': 'ease', 'delay': '0ms', 'complete': ''};
+    specialProps = {transform: that.transform};
     timing = {
         ease: ease('ease', 'swing'),
         easeLinear: ease('linear', 'swing'),
@@ -95,6 +132,7 @@ var SUPPORT = (function () {
         easeInOutBack: ease('cubic-bezier(0.680, -0.550, 0.265, 1.550)', 'easeInOutBack'),
     };
 
+
     function ease(css, js) {
         var str = (that.csstransitions === true) ? css : js;
         return str;
@@ -111,7 +149,7 @@ var SUPPORT = (function () {
     function getProp(prop) {
         var i, cased, styleProp;
         if (prop in style) {
-           return normalize(prop);
+            return normalize(prop);
         }
         cased = prop.charAt(0).toUpperCase() + prop.substr(1); 
         for (i = 0; i < numPrefixes; i += 1) {
@@ -128,21 +166,66 @@ var SUPPORT = (function () {
     }
 
     function buildProps(props, values) {
-        var prop;
+        var prop, hasComplete = false;
         for(key in values) {
             // Extract properties from the object 
             if(typeof defaults[key] === "undefined") {
                 prop = key;
-                if(specialProps[key]) {
+                if(specialProps[prop]) {
                     prop = specialProps[key];
                 }
                 props[prop] = {
                     value: values[key], 
                     easing: values.easing || defaults.easing,
-                    delay: values.delay || defaults.delay,
-                    duration: values.duration || defaults.duration,
+                    delay: unit(values.delay, 'ms'),
+                    duration: unit(values.duration || defaults.duration, 'ms')
                 };
+                if (hasComplete === false && values.complete) {
+                    hasComplete = true;
+                    props[prop].complete = values.complete;
+                }
             }
+        }
+    }
+
+    function transEndHelper(el, props, oldTransCSS) {
+        return function onEnd(e) {
+            // Prevent bubbled events from triggering this
+            if (e.target !== this || e.propertyName in props === false) {
+                return;
+            }
+            var propObj = props[e.propertyName],
+                completeFN = propObj.complete;
+            supportData = el.data("supportData");
+            // Check if it exists, in jQuery if item is removed it no longer has data
+            if (typeof supportData !== "undefined") {
+                if (supportData.numTrans === 1) {
+                    this.removeEventListener(that.transitionEnd, onEnd);
+                    el.css(that.transition, supportData.oldCSS);
+                    el.removeData("supportData");
+                } else {
+                    supportData.numTrans -= 1;
+                    el.data("supportData", supportData);
+                }
+            // If not data found, all is lost, the item has been removed, clear the css
+            } else {
+                el.css(that.transition, "");
+            }
+
+            // Call the complete callback for this properties transition
+            if (typeof completeFN === "function") {
+                // Remove complete to prevent duplicate calls
+                propObj.complete = undefined;
+                completeFN();
+            }
+        }
+    }
+
+    function unit(i, abbr) {
+        if(typeof i === 'string' && !i.match(/^[\-0-9\.]+$/)) {
+            return i;
+        } else if(typeof i !== "undefined") {
+            return i + abbr;
         }
     }
 
