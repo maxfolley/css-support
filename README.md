@@ -1,9 +1,7 @@
 CSS Support
 ==========
 
-A javascript support object for accessing CSS3 animation declaration and event names.  
-
-Also contains an animation helper that will use css transitions if available and will fallback to jQuery if not.
+A javascript support object for accessing CSS3 animation declaration and event names. SUPPORT also contains an animation helper that uses css transitions.
 
 SUPPORT only has one dependeny at this time, jQuery. This dependency will be removed on the next iteration.
 
