@@ -18,7 +18,10 @@ Usage
     SUPPORT.animate(el, {
       height: 200,
       easing: 'inOutCubic',
-      duration: 600
+      duration: 600,
+      complete: function() {
+        console.log("do something!");
+      }
     });   
 
     // Seuencig animations
