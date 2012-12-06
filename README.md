@@ -46,7 +46,7 @@ Usage
     SUPPORT.animation
     SUPPORT.transition
 
-     // Animte usinc css transitions and supply a fallback
+     // Animate using css transitions and supply a fallback
     if (SUPPORT.transition) {
       SUPPORT.animate(el, [{
         height: 200,
