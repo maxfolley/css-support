@@ -1,18 +1,98 @@
 var SUPPORT = (function () {
     
-    var animEvents, numPrefixes, opts, prefixes, style, that, timing, trans, transEvents; 
+    var animEvents, belt, numPrefixes, opts, prefixes, style, that, timing, trans, transEvents; 
 
     animEvents = {'animation': 'animationend', 'MozAnimation': 'animationend', 'WebkitAnimation': 'webkitAnimationEnd'}
     style = (document.body || document.documentElement).style;
     prefixes = ['Moz', 'Webkit', 'O', 'ms'];
     numPrefixes = prefixes.length;
-    // Tracks number of running animations for a givien element
+    // Tracks number of running animations for a given element
     runningDict = {};
     transEvents = {'transition': 'transitionend', '-moz-transition': 'transitionend', '-o-transition': 'oTransitionEnd', '-webkit-transition': 'webkitTransitionEnd', '-ms-transition': 'MSTransitionEnd'};
+
+    // Belt, a mini-toolbelt for SUPPORT elements (private)
+    belt = function (obj) {
+        if (obj instanceof belt) return obj;
+        if (!(this instanceof belt)) return new belt(obj);
+    };
+
+    // Belt's set of utilities
+    belt.tools = {
+        // a data-store for selector information, key/value based
+        cache: {},
+
+        // assign a value to a key in this.cache, if a value is not supplied, the value of the key is returned
+        data: function (key, val) {
+            if (typeof key !== "string") return this;
+            // match whitespace in key and throw error
+            if (key.match(/\s+/)) {
+                throw new Error("Data-key must not contain whitespace");
+            }
+            // fetch and return key value
+            if (val === undefined && this.cache[key] !== undefined) {
+                return this.cache[key];
+            }
+            // assign key value
+            if (val !== undefined) {
+                this.cache[key] = val;
+            }
+            return this;
+        },
+
+        // assign style properties to an element, or, fetch the value
+        css: function (prop, val) {
+            if (prop === undefined) return this;
+    
+            // el.css({marginLeft: "500px"})
+            if (typeof prop === "object") {
+                for (var key in prop) {
+                    var propVal = prop[key];
+                    key = convertProp(key);
+                    if (typeof propVal !== "string") {
+                        propVal = propVal.toString(); 
+                    } 
+                    this.style[key] = propVal;
+                }
+
+            // el.css("margin-left", "500px"); or el.css("margin-left");
+            } else {
+                prop = convertProp(prop);
+                if (val === undefined) {
+                    return window.getComputedStyle(this, null)[prop];
+                }
+                this.style[prop] = val;
+            }
+
+            return this;
+        },
+
+        // If a key is supplied, delete that key from this.cache, otherwise, wipe this.cache
+        removeData: function (key) {
+            if (!key) {
+                this.cache = {}; 
+            } else {
+                delete this.cache[key];
+            }
+            return this;
+        }
+    };
+
+    // copy properties of a source object into the first object argument
+    // ex: belt.extend(el, belt.tools);
+    belt.extend = function (obj, source) {
+        if (obj === null || source === null) return;
+        for (var prop in source) {
+            if (obj.hasOwnProperty(prop)) continue;
+            obj[prop] = source[prop];
+        }
+        return obj;
+    };
+
     that = {
         // SUPPORT.animate(el, {opacity: 1, duration: 800, delay: 300});
         // SUPPORT.animate(el, [{opacity: 1, duration: 800, delay: 300}, {x: 100, ease: 'inCubic'}]);
         animate: function(el, opts) {
+            belt.extend(el, belt.tools);
             var i, prop, propObj, transStr,
                 map = {}, numTrans = 0, props = {}, supportData, trans = [];
             // Build animation string 
@@ -43,7 +123,8 @@ var SUPPORT = (function () {
                         oldCSS: el.css(that.transition),
                         onEnd: transEndHelper(el, props) 
                     }
-                    el[0].addEventListener(that.transitionEnd, supportData.onEnd);
+                    el.addEventListener(that.transitionEnd, supportData.onEnd);
+                    //el[0].addEventListener(that.transitionEnd, supportData.onEnd);
                 }
                 supportData.running = true;
                 supportData.numTrans = trans.length;
@@ -132,6 +213,14 @@ var SUPPORT = (function () {
         easeInOutBack: ease('cubic-bezier(0.680, -0.550, 0.265, 1.550)', 'easeInOutBack'),
     };
 
+    function convertProp(str) {
+        var i, matches = str.match(/\b-[A-Za-z]/g), len = matches.length;
+        if (!len) return str;
+        for (i = 0; i < len; i += 1) {
+            str = str.replace(matches[i], matches[i][1].toUpperCase());
+        }
+        return str;
+    }
 
     function ease(css, js) {
         var str = (that.csstransitions === true) ? css : js;
